@@ -8,26 +8,13 @@
 import SwiftUI
 import PhotosUI
 
-struct IdentifiableAsset: Identifiable {
-    let id = UUID()
-    let asset: PHAsset
-}
-
-
 struct RegionMediaView: View {
     @Binding var items: [MediaItem]
     @Binding var isPresented: Bool
 
-    @State private var selectedAsset: IdentifiableAsset?
-    
-    @State private var selectedAssetForDetail: IdentifiableAsset?
-
-    @State private var scale: CGFloat = 1.0
-    @State private var lastScale: CGFloat = 1.0
-
-    @State private var offset: CGSize = .zero
-    @State private var lastOffset: CGSize = .zero
-
+    @State private var fullScreenItems: [MediaItem] = []
+    @State private var selectedIndex: Int = 0
+    @State private var isShowingGallery = false
 
     let columns = [
         GridItem(.flexible(), spacing: 8),
@@ -65,7 +52,9 @@ struct RegionMediaView: View {
                         LazyVGrid(columns: columns, spacing: 8) {
                             ForEach(items) { item in
                                 PhotoThumbnailView(asset: item.asset) { _ in
-                                    selectedAssetForDetail = IdentifiableAsset(asset: item.asset)
+                                    fullScreenItems = items
+                                    selectedIndex = items.firstIndex(of: item) ?? 0
+                                    isShowingGallery = true
                                 }
                             }
                         }
@@ -74,8 +63,8 @@ struct RegionMediaView: View {
                 }
             }
         }
-        .fullScreenCover(item: $selectedAssetForDetail) { wrapper in
-            MediaDetailView(item: MediaItem(asset: wrapper.asset, region: ""))
+        .fullScreenCover(isPresented: $isShowingGallery) {
+            FullScreenGalleryView(mediaItems: fullScreenItems, currentIndex: selectedIndex)
         }
     }
 }
