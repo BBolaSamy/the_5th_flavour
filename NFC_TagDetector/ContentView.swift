@@ -8,78 +8,35 @@ import PhotosUI
 import SwiftUI
 import Photos
 import CoreLocation
+import Combine
 
 struct ContentView: View {
-    @State private var selectedRegionMedia: [MediaItem] = []
+    @Environment(\.scenePhase) private var scenePhase
+    @AppStorage("lastSyncDate") private var lastSyncDate: Double = 0
+    @State private var cityGroupedMedia = [String: [String: [MediaItem]]]() // [Province: [City: [Items]]]
+    @State private var selectedProvince = ""
+    @State private var selectedCityMedia: [MediaItem] = []
+    @State private var showingCityList = false
     @State private var showingRegionMedia = false
-    @State private var groupedMedia = [String: [MediaItem]]()
-    @State private var log = "Fetching photos..."
     @State private var isPickerPresented = false
+    @AppStorage("autoSyncEnabled") var autoSyncEnabled: Bool = true
+    @State private var log = ""
 
     var body: some View {
         ZStack {
-            // Background
-            Color(hex: "#3E4C41")
-                    .ignoresSafeArea()
+            Color(hex: "#3E4C41").ignoresSafeArea()
 
             VStack(spacing: 30) {
                 Spacer()
-                
-                // App Logo and Title
-                VStack {
-                    Image("#426B68-4")
-                        .resizable()
-                        .scaledToFit()
-                        .frame(width: 150, height: 150)
-                        .padding(.bottom, 10)
 
-                }
+                Image("#426B68-4")
+                    .resizable()
+                    .scaledToFit()
+                    .frame(width: 150, height: 150)
 
-                // Buttons
                 VStack(spacing: 16) {
-                    Button(action: {
-                        print("Grouped Media Keys: \(groupedMedia.keys)")
-                        if let media = groupedMedia["Lazio"] {
-                            print("📸 Simulated NFC Scan → Lazio has \(media.count) media items")
-                            DispatchQueue.main.async {
-                                selectedRegionMedia = media
-                                showingRegionMedia = true
-                            }
-                        } else {
-                            print("⚠️ No media found for Lazio")
-                        }
-                    }) {
-                        Text("SCAN Lazio Rome")
-                            .font(.headline)
-                            .padding()
-                            .frame(maxWidth: .infinity)
-                            .background(Color.gray.opacity(0.8))
-                            .foregroundColor(.white)
-                            .cornerRadius(12)
-                            .shadow(radius: 8)
-                    }
-                    
-                    Button(action: {
-                        print("Grouped Media Keys: \(groupedMedia.keys)")
-                        if let media = groupedMedia["Lower Saxony"] {
-                            print("📸 Simulated NFC Scan → Lower Saxony has \(media.count) media items")
-                            DispatchQueue.main.async {
-                                selectedRegionMedia = media
-                                showingRegionMedia = true
-                            }
-                        } else {
-                            print("⚠️ No media found for Lower Saxony")
-                        }
-                    }) {
-                        Text("SCAN Lower Saxony BS")
-                            .font(.headline)
-                            .padding()
-                            .frame(maxWidth: .infinity)
-                            .background(Color.gray.opacity(0.8))
-                            .foregroundColor(.white)
-                            .cornerRadius(12)
-                            .shadow(radius: 8)
-                    }
+                    scanButton(for: "Lazio")
+                    scanButton(for: "Lower Saxony")
 
                     Button("➕ Add New Media") {
                         isPickerPresented = true
@@ -93,60 +50,112 @@ struct ContentView: View {
                 }
                 .padding(.horizontal, 30)
 
-                Spacer()
-
-                // Debug log at bottom
                 ScrollView {
-                    //Text(log)
-                    //  .font(.caption)
-                    //  .foregroundColor(.gray)
-                    //  .padding()
+                    Text(log)
+                        .foregroundColor(.white)
+                        .font(.caption)
+                        .padding()
                 }
-                .frame(maxHeight: 180)
-                .background(Color.white.opacity(0.05))
+                .frame(maxHeight: 140)
+                .background(Color.black.opacity(0.2))
                 .cornerRadius(10)
-                .padding(.horizontal)
-                .padding(.bottom, 20)
+                .padding()
             }
         }
+        .fullScreenCover(isPresented: $showingCityList) {
+            CityListView(
+                cities: cityGroupedMedia[selectedProvince]?.keys.sorted() ?? [],
+                onSelect: { city in
+                    if let media = cityGroupedMedia[selectedProvince]?[city] {
+                        selectedCityMedia = media
+                        showingRegionMedia = true
+                    }
+                    showingCityList = false
+                },
+                onClose: { showingCityList = false }
+            )
+        }
         .fullScreenCover(isPresented: $showingRegionMedia) {
-            RegionMediaView(items: $selectedRegionMedia, isPresented: $showingRegionMedia)
+            RegionMediaView(items: $selectedCityMedia, isPresented: $showingRegionMedia)
         }
         .photosPicker(isPresented: $isPickerPresented, selection: .constant(nil))
-        .onAppear(perform: fetchPhotosWithLocation)
+        .onAppear {
+            if autoSyncEnabled {
+                fetchPhotosWithLocation()
+            }
+        }
+        .onChange(of: scenePhase) { newPhase in
+            if newPhase == .active && autoSyncEnabled {
+                fetchPhotosWithLocation()
+            }
+        }
     }
+
+    // MARK: - UI
+
+    func scanButton(for province: String) -> some View {
+        Button(action: {
+            selectedProvince = province
+            if let cities = cityGroupedMedia[province], !cities.isEmpty {
+                showingCityList = true
+            } else {
+                log += "⚠️ No media found for \(province).\n"
+            }
+        }) {
+            Text("SCAN \(province)")
+                .font(.headline)
+                .padding()
+                .frame(maxWidth: .infinity)
+                .background(Color.gray.opacity(0.8))
+                .foregroundColor(.white)
+                .cornerRadius(12)
+                .shadow(radius: 8)
+        }
+    }
+
+    // MARK: - Fetch Media
 
     func fetchPhotosWithLocation() {
         PHPhotoLibrary.requestAuthorization { status in
             guard status == .authorized else {
                 DispatchQueue.main.async {
-                    log = "Photo access denied."
+                    log += "❌ Photo access denied.\n"
                 }
                 return
             }
 
-            let options = PHFetchOptions()
-            options.sortDescriptors = [NSSortDescriptor(key: "creationDate", ascending: false)]
+            let fetchOptions = PHFetchOptions()
+            fetchOptions.predicate = NSPredicate(
+                format: "(mediaType == %d || mediaType == %d)",
+                PHAssetMediaType.image.rawValue,
+                PHAssetMediaType.video.rawValue
+            )
 
-            let imageAssets = PHAsset.fetchAssets(with: .image, options: options)
-            let videoAssets = PHAsset.fetchAssets(with: .video, options: options)
+            let assets = PHAsset.fetchAssets(with: fetchOptions)
+            var fetchedAssets: [PHAsset] = []
+            assets.enumerateObjects { asset, _, _ in
+                fetchedAssets.append(asset)
+            }
 
-            var allAssets: [PHAsset] = []
-            imageAssets.enumerateObjects { asset, _, _ in allAssets.append(asset) }
-            videoAssets.enumerateObjects { asset, _, _ in allAssets.append(asset) }
+            DispatchQueue.main.async {
+                if !fetchedAssets.isEmpty {
+                    log += "📥 Found \(fetchedAssets.count) media item(s)...\n"
 
-            processAssets(allAssets, index: 0)
+                    // ✅ Clear old data to avoid duplication
+                    cityGroupedMedia.removeAll()
+
+                    processAssets(fetchedAssets, index: 0)
+                    lastSyncDate = Date().timeIntervalSince1970
+                } else {
+                    log += "⚠️ No media items found in Photos library.\n"
+                }
+            }
         }
     }
 
     func processAssets(_ assets: [PHAsset], index: Int) {
         guard index < assets.count else {
-            DispatchQueue.main.asyncAfter(deadline: .now() + 1.0) {
-                print("📦 Final grouped media:")
-                for (region, items) in groupedMedia {
-                    print("→ \(region): \(items.count) item(s)")
-                }
-            }
+            log += "✅ Grouping complete.\n"
             return
         }
 
@@ -154,21 +163,23 @@ struct ContentView: View {
         if let location = asset.location {
             let geocoder = CLGeocoder()
             geocoder.reverseGeocodeLocation(location) { placemarks, _ in
-                let region = placemarks?.first?.administrativeArea ?? "Unknown"
-                let item = MediaItem(asset: asset, region: region)
+                let placemark = placemarks?.first
+                let region = placemark?.administrativeArea ?? "Unknown"
+                let city = placemark?.locality ?? "Unknown"
+                let item = MediaItem(asset: asset, region: region, city: city)
 
                 DispatchQueue.main.async {
-                    groupedMedia[region, default: []].append(item)
-                    log += "📍 (\(location.coordinate.latitude), \(location.coordinate.longitude)) → Region: \(region)\n"
+                    cityGroupedMedia[region, default: [:]][city, default: []].append(item)
+                    log += "📍 \(region), \(city)\n"
                 }
 
-                DispatchQueue.global().asyncAfter(deadline: .now() + 0.2) {
+                DispatchQueue.global().asyncAfter(deadline: .now() + 0.15) {
                     processAssets(assets, index: index + 1)
                 }
             }
         } else {
             DispatchQueue.main.async {
-                log += "🖼️ Photo has no location data.\n"
+                log += "❌ Asset has no location info.\n"
             }
 
             DispatchQueue.global().asyncAfter(deadline: .now() + 0.1) {

@@ -14,6 +14,7 @@ struct MediaItem: Identifiable, Hashable {
     let id = UUID()
     let asset: PHAsset
     let region: String
+    let city: String   
     var location: CLLocation?
 
     static func == (lhs: MediaItem, rhs: MediaItem) -> Bool {
