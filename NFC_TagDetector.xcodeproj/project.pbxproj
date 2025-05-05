@@ -6,6 +6,10 @@
 	objectVersion = 77;
 	objects = {
 
+/* Begin PBXBuildFile section */
+		F68E8E7C2DC94E2800169FE0 /* ZIPFoundation in Frameworks */ = {isa = PBXBuildFile; productRef = F68E8E7B2DC94E2800169FE0 /* ZIPFoundation */; };
+/* End PBXBuildFile section */
+
 /* Begin PBXContainerItemProxy section */
 		F62195302DB7E61100E3D53D /* PBXContainerItemProxy */ = {
 			isa = PBXContainerItemProxy;
@@ -52,6 +56,7 @@
 			isa = PBXFrameworksBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				F68E8E7C2DC94E2800169FE0 /* ZIPFoundation in Frameworks */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -112,6 +117,7 @@
 			);
 			name = NFC_TagDetector;
 			packageProductDependencies = (
+				F68E8E7B2DC94E2800169FE0 /* ZIPFoundation */,
 			);
 			productName = NFC_TagDetector;
 			productReference = F621951F2DB7E60F00E3D53D /* NFC_TagDetector.app */;
@@ -195,6 +201,9 @@
 			);
 			mainGroup = F62195162DB7E60F00E3D53D;
 			minimizedProjectReferenceProxies = 1;
+			packageReferences = (
+				F68E8E7A2DC94E1800169FE0 /* XCRemoteSwiftPackageReference "ZIPFoundation" */,
+			);
 			preferredProjectObjectVersion = 77;
 			productRefGroup = F62195202DB7E60F00E3D53D /* Products */;
 			projectDirPath = "";
@@ -564,6 +573,25 @@
 			defaultConfigurationName = Release;
 		};
 /* End XCConfigurationList section */
+
+/* Begin XCRemoteSwiftPackageReference section */
+		F68E8E7A2DC94E1800169FE0 /* XCRemoteSwiftPackageReference "ZIPFoundation" */ = {
+			isa = XCRemoteSwiftPackageReference;
+			repositoryURL = "https://github.com/weichsel/ZIPFoundation";
+			requirement = {
+				kind = upToNextMajorVersion;
+				minimumVersion = 0.9.19;
+			};
+		};
+/* End XCRemoteSwiftPackageReference section */
+
+/* Begin XCSwiftPackageProductDependency section */
+		F68E8E7B2DC94E2800169FE0 /* ZIPFoundation */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = F68E8E7A2DC94E1800169FE0 /* XCRemoteSwiftPackageReference "ZIPFoundation" */;
+			productName = ZIPFoundation;
+		};
+/* End XCSwiftPackageProductDependency section */
 	};
 	rootObject = F62195172DB7E60F00E3D53D /* Project object */;
 }

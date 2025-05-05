@@ -7,6 +7,8 @@
 
 import SwiftUI
 import PhotosUI
+import UniformTypeIdentifiers
+import ZIPFoundation
 
 struct RegionMediaView: View {
     @Binding var items: [MediaItem]
@@ -27,7 +29,6 @@ struct RegionMediaView: View {
             Color(.systemBackground).ignoresSafeArea()
 
             VStack(alignment: .center) {
-                // Back Button
                 HStack {
                     Button(action: {
                         isPresented = false
@@ -42,6 +43,16 @@ struct RegionMediaView: View {
                     .padding(.leading, 12)
 
                     Spacer()
+
+                    Button(action: exportAndShareMedia) {
+                        Image(systemName: "square.and.arrow.up")
+                            .font(.headline)
+                            .foregroundColor(.white)
+                            .padding(10)
+                            .background(Color.blue)
+                            .clipShape(Circle())
+                    }
+                    .padding(.trailing, 12)
                 }
 
                 if items.isEmpty {
@@ -65,6 +76,55 @@ struct RegionMediaView: View {
         }
         .fullScreenCover(isPresented: $isShowingGallery) {
             FullScreenGalleryView(mediaItems: fullScreenItems, currentIndex: selectedIndex)
+        }
+    }
+
+    func exportAndShareMedia() {
+        let fileManager = FileManager.default
+        let tempDir = fileManager.temporaryDirectory
+        let exportFolder = tempDir.appendingPathComponent("ExportedMedia", isDirectory: true)
+
+        try? fileManager.removeItem(at: exportFolder)
+        try? fileManager.createDirectory(at: exportFolder, withIntermediateDirectories: true)
+
+        let dispatchGroup = DispatchGroup()
+
+        for (index, item) in items.enumerated() {
+            dispatchGroup.enter()
+            let resourceOptions = PHAssetResourceRequestOptions()
+            resourceOptions.isNetworkAccessAllowed = true
+
+            let resources = PHAssetResource.assetResources(for: item.asset)
+            guard let resource = resources.first else {
+                dispatchGroup.leave()
+                continue
+            }
+
+            let fileExtension = resource.uniformTypeIdentifier.contains("video") ? ".mov" : ".jpg"
+            let filename = String(format: "media_%03d%@", index, fileExtension)
+            let outputURL = exportFolder.appendingPathComponent(filename)
+
+            PHAssetResourceManager.default().writeData(for: resource, toFile: outputURL, options: resourceOptions) { error in
+                if let error = error {
+                    print("❌ Failed to export: \(error)")
+                }
+                dispatchGroup.leave()
+            }
+        }
+
+        dispatchGroup.notify(queue: .main) {
+            let zipURL = tempDir.appendingPathComponent("RegionExport.zip")
+            try? fileManager.removeItem(at: zipURL)
+            do {
+                try fileManager.zipItem(at: exportFolder, to: zipURL)
+                let activityVC = UIActivityViewController(activityItems: [zipURL], applicationActivities: nil)
+                if let windowScene = UIApplication.shared.connectedScenes.first as? UIWindowScene,
+                   let rootVC = windowScene.windows.first?.rootViewController {
+                    rootVC.present(activityVC, animated: true)
+                }
+            } catch {
+                print("❌ Zip failed: \(error)")
+            }
         }
     }
 }
