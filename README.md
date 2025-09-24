@@ -216,9 +216,6 @@ This project is licensed under the MIT License - see the [LICENSE](LICENSE) file
 - Apple for CoreNFC and SwiftUI frameworks
 - The SwiftUI community for inspiration and support
 
-## 📞 Support
-
-For support, email support@nfc-tagdetector.com or create an issue in this repository.
 
 ## 🔮 Roadmap
 
