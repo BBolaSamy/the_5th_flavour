@@ -1,46 +1,46 @@
-//
-//  FullScreenGalleryView.swift
-//  NFC_TagDetector
-//
-//  Created by George Saleip on 30.04.25.
-//
-
 import SwiftUI
-import Photos
 import AVKit
+import Photos
 
 struct FullScreenGalleryView: View {
     let mediaItems: [MediaItem]
-    @State var currentIndex: Int
+    let currentItem: MediaItem
 
-    @Environment(\.dismiss) private var dismiss
+    @Environment(\.dismiss) var dismiss
+    @State private var selectedIndex: Int = 0
 
     var body: some View {
-        TabView(selection: $currentIndex) {
+        TabView(selection: $selectedIndex) {
             ForEach(mediaItems.indices, id: \.self) { index in
                 let item = mediaItems[index]
-
                 ZStack {
-                    if item.asset.mediaType == .video {
+                    if item.isImage {
+                        ImageView(asset: item.asset)
+                    } else if item.isVideo {
                         VideoPlayerView(asset: item.asset)
-                    } else {
-                        ZoomableImageView(asset: item.asset)
                     }
                 }
                 .tag(index)
+                .ignoresSafeArea()
             }
         }
-        .tabViewStyle(PageTabViewStyle(indexDisplayMode: .automatic))
-        .background(Color.black.ignoresSafeArea())
-        .overlay(alignment: .topTrailing) {
-            Button {
+        .tabViewStyle(PageTabViewStyle(indexDisplayMode: .always))
+        .background(Color.black)
+        .onAppear {
+            if let startIndex = mediaItems.firstIndex(where: { $0.asset.localIdentifier == currentItem.asset.localIdentifier }) {
+                selectedIndex = startIndex
+            }
+        }
+        .overlay(
+            Button(action: {
                 dismiss()
-            } label: {
+            }) {
                 Image(systemName: "xmark.circle.fill")
                     .font(.system(size: 30))
                     .foregroundColor(.white)
                     .padding()
-            }
-        }
+            },
+            alignment: .topTrailing
+        )
     }
 }

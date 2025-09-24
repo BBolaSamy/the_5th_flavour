@@ -1,80 +1,75 @@
-//
-//  JournalEditorView.swift
-//  NFC_TagDetector
-//
-//  Created by George Saleip on 28.05.25.
-//
-
-import Foundation
 import SwiftUI
-import Photos
 
-struct JournalEditorView: View {
-    let mediaItems: [MediaItem]
+struct CreateNewEntryView: View {
     let region: String
+    let media: [MediaItem]
 
-    @Environment(\.dismiss) var dismiss
     @State private var selectedItems: [MediaItem] = []
-    @State private var textBlocks: [String] = []
-    @State private var editingText: String = ""
+    @State private var showEditor = false
+    @Environment(\.dismiss) private var dismiss
 
     var body: some View {
         NavigationView {
-            ScrollView {
-                VStack(spacing: 20) {
-                    ForEach(selectedItems.indices, id: \.self) { index in
-                        let item = selectedItems[index]
-                        PhotoThumbnailView(item: item)
+            VStack {
+                ScrollView {
+                    Section(header: Text("Select Media from \(region)")
+                        .font(.headline)
+                        .padding(.horizontal)) {
 
-                        // Add optional text block between media
-                        if textBlocks.indices.contains(index) {
-                            TextEditor(text: Binding(
-                                get: { textBlocks[index] },
-                                set: { textBlocks[index] = $0 }
-                            ))
-                            .frame(height: 100)
-                            .padding()
-                            .background(Color(.systemGray6))
-                            .cornerRadius(10)
+                        LazyVGrid(columns: [GridItem(.adaptive(minimum: 100), spacing: 10)], spacing: 12) {
+                            ForEach(media) { item in
+                                PhotoThumbnailView(item: item) { tapped in
+                                    toggleSelection(item: tapped)
+                                }
+                                .overlay(
+                                    selectedItems.contains(item) ?
+                                    Image(systemName: "checkmark.circle.fill")
+                                        .foregroundColor(.green)
+                                        .padding(6) : nil,
+                                    alignment: .topTrailing
+                                )
+                            }
                         }
-
-                        Button("Add Text Here") {
-                            textBlocks.insert("", at: index)
-                        }
-                        .font(.caption)
+                        .padding()
                     }
 
                     if selectedItems.isEmpty {
-                        Text("Select media to start creating your entry.")
+                        Text("Select at least one photo or video to continue.")
                             .foregroundColor(.gray)
+                            .padding()
                     }
                 }
+
+                Button("Next") {
+                    showEditor = true
+                }
+                .disabled(selectedItems.isEmpty)
                 .padding()
+                .frame(maxWidth: .infinity)
+                .background(selectedItems.isEmpty ? Color.gray : Color.green)
+                .foregroundColor(.white)
+                .cornerRadius(12)
+                .padding(.horizontal)
+                .padding(.bottom)
             }
             .navigationTitle("New Journal Entry")
-            .toolbar {
-                ToolbarItem(placement: .navigationBarLeading) {
-                    Button("Cancel") {
-                        dismiss()
-                    }
-                }
-                ToolbarItem(placement: .navigationBarTrailing) {
-                    Button("Save") {
-                        saveEntry()
-                        dismiss()
-                    }
-                    .disabled(selectedItems.isEmpty)
-                }
+            .navigationBarItems(leading: Button("Cancel") {
+                dismiss()
+            })
+            .sheet(isPresented: $showEditor) {
+                JournalEditorView(
+                    region: region,
+                    initialMedia: selectedItems
+                )
             }
-        }
-        .onAppear {
-            selectedItems = mediaItems // Pre-fill with all items, or implement selection UI if you prefer
-            textBlocks = Array(repeating: "", count: mediaItems.count)
         }
     }
 
-    func saveEntry() {
-        // Here you’ll store the journal entry — could be CoreData, file, or cloud
-        print("Saving journal with \(selectedItems.count) items and \(textBlocks.count) texts.")
+    private func toggleSelection(item: MediaItem) {
+        if let index = selectedItems.firstIndex(of: item) {
+            selectedItems.remove(at: index)
+        } else {
+            selectedItems.append(item)
+        }
     }
 }

@@ -1,9 +1,4 @@
-//
-//  MediaDetailView.swift
-//  NFC_TagDetector
-//
-//  Created by George Saleip on 23.04.25.
-//
+
 
 import SwiftUI
 import PhotosUI

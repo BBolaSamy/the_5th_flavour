@@ -1,14 +1,9 @@
-//
-//  eee.swift
-//  NFC_TagDetector
-//
-//  Created by George Saleip on 29.05.25.
-//
+
 
 import Foundation
 
 class UnsplashImageFetcher {
-    static let apiKey = "YOUR_UNSPLASH_ACCESS_KEY" // Replace with your actual key
+    static let apiKey = "WzoWdxyP1crbRut7fuh11tFAwApbIulJinOmrZo1OLY" // Replace with your actual key
 
     static func fetchImageURL(for query: String, completion: @escaping (URL?) -> Void) {
         let encodedQuery = query.addingPercentEncoding(withAllowedCharacters: .urlQueryAllowed) ?? query

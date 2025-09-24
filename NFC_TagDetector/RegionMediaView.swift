@@ -1,10 +1,3 @@
-//
-//  RegionMediaView.swift
-//  NFC_TagDetector
-//
-//  Created by George Saleip on 22.04.25.
-//
-
 import SwiftUI
 import PhotosUI
 import UniformTypeIdentifiers
@@ -15,7 +8,7 @@ struct RegionMediaView: View {
     @Binding var isPresented: Bool
 
     @State private var fullScreenItems: [MediaItem] = []
-    @State private var selectedIndex: Int = 0
+    @State private var selectedItem: MediaItem? = nil
     @State private var isShowingGallery = false
 
     let columns = [
@@ -62,9 +55,9 @@ struct RegionMediaView: View {
                     ScrollView {
                         LazyVGrid(columns: columns, spacing: 8) {
                             ForEach(items) { item in
-                                PhotoThumbnailView(asset: item.asset) { _ in
+                                PhotoThumbnailView(item: item) { selected in
                                     fullScreenItems = items
-                                    selectedIndex = items.firstIndex(of: item) ?? 0
+                                    selectedItem = selected
                                     isShowingGallery = true
                                 }
                             }
@@ -75,7 +68,13 @@ struct RegionMediaView: View {
             }
         }
         .fullScreenCover(isPresented: $isShowingGallery) {
-            FullScreenGalleryView(mediaItems: fullScreenItems, currentIndex: selectedIndex)
+            if let selectedItem = selectedItem {
+                FullScreenGalleryView(mediaItems: fullScreenItems, currentItem: selectedItem)
+            } else {
+                Text("No media to show")
+                    .foregroundColor(.white)
+                    .background(Color.black.ignoresSafeArea())
+            }
         }
     }
 

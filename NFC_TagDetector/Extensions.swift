@@ -1,8 +1,9 @@
-//
-//  Extensions.swift
-//  NFC_TagDetector
-//
-//  Created by George Saleip on 31.05.25.
-//
 
 import Foundation
+
+extension DateFormatter {
+    func apply(_ block: (DateFormatter) -> Void) -> DateFormatter {
+        block(self)
+        return self
+    }
+}

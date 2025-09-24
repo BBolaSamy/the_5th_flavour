@@ -1,9 +1,3 @@
-//
-//  CityListView.swift
-//  NFC_TagDetector
-//
-//  Created by George Saleip on 05.05.25.
-//
 
 import Foundation
 import SwiftUI
